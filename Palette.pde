@@ -13,13 +13,15 @@ ArrayList<Forme> formes; // liste de formes stockées
 FSM mae; // Finite Sate Machine
 int indice_forme;
 PImage sketch_icon;
-String adresse = "127.255.255.255:2010";
 String message_erreur;
+int nb_save = 0;
 
 Ivy bus_geste;
+String adresse_geste = "127.255.255.255:2011";
 String message_geste;
 
 Ivy bus_parole;
+String adresse_parole = "127.255.255.255:2010";
 String message_parole;
 String action;
 String forme;
@@ -43,7 +45,7 @@ void setup() {
   try{
       // création du bus dédié à la parole
       bus_parole = new Ivy("Parole","Parole Ready", null);
-      bus_parole.start(adresse);
+      bus_parole.start(adresse_parole);
       // on récupere tous les messages
       bus_parole.bindMsg("^(.*)", new IvyMessageListener(){
         @Override
@@ -52,6 +54,22 @@ void setup() {
           println("RECEIVE " + simulation);
           analyse(simulation);
           println(" commande: "  + message_parole + " tx_confiance: " + taux_confiance);
+          // mise à jour de la FSM en fonction des actions demandé
+          realisation();
+        }
+      });
+      
+      // création du bus dédié à la capture de geste
+      bus_geste = new Ivy("Geste","Geste Ready", null);
+      bus_geste.start(adresse_geste);
+      // on récupere tous les messages
+      bus_geste.bindMsg("^(.*)", new IvyMessageListener(){
+        @Override
+        public void receive(IvyClient client, String[] args) {
+          String simulation = args[0];
+          println("RECEIVE " + simulation);
+          analyse(simulation);
+          println(" commande: "  + message_geste + " tx_confiance: " + taux_confiance);
           // mise à jour de la FSM en fonction des actions demandé
           realisation();
         }
@@ -91,6 +109,7 @@ void draw() {
       }
       else{        
         //on ne reconnait pas la forme demandé 
+        message_erreur = "la forme demandé n'est pas reconnue";
         mae = FSM.ERREUR;
       }
       break;
@@ -141,6 +160,12 @@ void affiche() {
 void mousePressed() { // sur l'événement clic
   Point p = new Point(mouseX,mouseY);
   switch (mae) {
+    
+    case INITIAL:
+    // si on est à l'affichage du menu on peut alors effectuer un clic
+    // ce qui nous mène à l'affichage du tableau blanc
+      mae = FSM.AFFICHER_FORMES;
+      break;
     
     case CREER:   
       if(position_objet.equalsIgnoreCase("THERE")){
@@ -278,6 +303,16 @@ void keyPressed() {
       
     case 'm' : // move
       mae=FSM.DEPLACER_FORMES_SELECTION;
+      break;    
+      
+    case 's' : // save image
+      if(nb_save > 0){
+        save("image-" + nb_save + ".tif");
+      }
+      else{
+        save("image.tif");
+      }
+      nb_save += 1;
       break;
   }
 }
@@ -351,6 +386,7 @@ void realisation(){
   } 
   else{
     // on ne reconnait pas l'action voulu => mise à jour de la FSM
+    message_erreur = "l'action enoncé n'est pas reconnue";
     mae = FSM.ERREUR;
   }
 }
@@ -395,6 +431,7 @@ void creer_forme(Point p){
   else{
       // on ne reconnait pas la forme
       indice_forme = -1;
+      message_erreur = "la forme voulu n'est pas reconnue";
       mae = FSM.ERREUR;
   }
 }
@@ -432,6 +469,7 @@ int[] maj_couleur(){
     return liste_couleur;
   }
   else{
+      message_erreur = "la couleur voulu n'est pas reconnue";
       mae = FSM.ERREUR;
       return new int[0];
   }
