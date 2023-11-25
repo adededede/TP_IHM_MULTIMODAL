@@ -73,6 +73,8 @@
 			<item> bleu <tag> out = "BLUE" </tag></item>
 			<item> rose <tag> out = "PINK" </tag></item>
 			<item> noir <tag> out = "BLACK" </tag></item>
+			<item> cette couleur ci <tag> out = "THIS" </tag></item>
+			<item> cette couleur <tag> out = "THIS" </tag></item>
 		</one-of> 
 	</rule>
 

@@ -19,6 +19,7 @@ int nb_save = 0;
 Ivy bus_geste;
 String adresse_geste = "127.255.255.255:2011";
 String message_geste;
+String taux_confiance_geste;
 
 Ivy bus_parole;
 String adresse_parole = "127.255.255.255:2010";
@@ -26,9 +27,9 @@ String message_parole;
 String action;
 String forme;
 String couleur;
-String position;
+String pointage_objet;
 String position_objet;
-String taux_confiance;
+String taux_confiance_parole;
 
 void setup() {
   size(800,600);
@@ -47,65 +48,82 @@ void setup() {
       bus_parole = new Ivy("Parole","Parole Ready", null);
       bus_parole.start(adresse_parole);
       // on récupere tous les messages
-      bus_parole.bindMsg("^(.*)", new IvyMessageListener(){
+      bus_parole.bindMsg("^sra5 Parsed=(.*)", new IvyMessageListener(){
         @Override
         public void receive(IvyClient client, String[] args) {
           String simulation = args[0];
           println("RECEIVE " + simulation);
-          analyse(simulation);
-          println(" commande: "  + message_parole + " tx_confiance: " + taux_confiance);
-          // mise à jour de la FSM en fonction des actions demandé
-          realisation();
+          analyse(simulation, "P");
+          if(message_parole.equalsIgnoreCase("0")){
+              message_erreur = "la demande n'est pas conforme, demande: " + simulation;
+          }
+          else if(float(taux_confiance_parole)<0.5){
+              message_erreur = "le taux de confiance est trop faible, taux de confiance: " + float(taux_confiance_parole);
+          }
+          else{
+              println(" commande: "  + message_parole + " tx_confiance: " + taux_confiance_parole);
+              // mise à jour de la FSM en fonction des actions demandé
+              realisation();
+          }
         }
       });
-      
+    }
+    catch(IvyException e){
+      println("IvyException: PAROLE : " + e);
+    }
+    try{  
       // création du bus dédié à la capture de geste
       bus_geste = new Ivy("Geste","Geste Ready", null);
       bus_geste.start(adresse_geste);
       // on récupere tous les messages
-      bus_geste.bindMsg("^(.*)", new IvyMessageListener(){
+      bus_geste.bindMsg("^OneDollarIvy(.*)", new IvyMessageListener(){
         @Override
         public void receive(IvyClient client, String[] args) {
           String simulation = args[0];
           println("RECEIVE " + simulation);
-          analyse(simulation);
-          println(" commande: "  + message_geste + " tx_confiance: " + taux_confiance);
+          analyse(simulation, "G");
+          println(" commande: "  + message_geste + " tx_confiance: " + taux_confiance_geste);
           // mise à jour de la FSM en fonction des actions demandé
           realisation();
         }
       });
     }
     catch(IvyException e){
-      println(e);
+      println("IvyException: GESTE : " + e);
     }
 }
 
 void draw() {
   //background(255);
-  println("MAE : " + mae + " indice forme active ; " + indice_forme);
+  // println("MAE : " + mae + " indice forme active ; " + indice_forme);
   switch (mae) {
     case INITIAL:  // Etat INITIAL
       background(255);
       fill(0);
       text("Etat initial (c(ercle)/l(osange)/r(ectangle)/t(riangle) pour créer la forme à la position courante)", 50,50);
       text("m(ove)+ click pour sélectionner un objet et click pour sa nouvelle position", 50,80);
-      text("click sur un objet pour changer sa couleur de manière aléatoire", 50,110);
+      text("s(ave) pour sauvegarder la fenetre courante sous forme d'image", 50,110);
+      text("click sur un objet pour changer sa couleur de manière aléatoire", 50,140);
       break;
       
     case CREER: 
       // creation de la forme
-      if (forme.equalsIgnoreCase("undefined")){
+      if (forme.equalsIgnoreCase("undefined") && pointage_objet.equalsIgnoreCase("this")){
         //la forme n'a pas été définie vocalement
         // tant que c'est le cas on attend
         delay(8000);
         mae = FSM.CREER;
+        break;//PEUT ETRE FAIRE UN ETAT DANS LA FSM: ATTENTE_DESSIN_FORME
       }  
       else if(forme.equalsIgnoreCase("CIRCLE")||forme.equalsIgnoreCase("TRIANGLE")|| forme.equalsIgnoreCase("RECTANGLE")|| forme.equalsIgnoreCase("DIAMOND")){ 
         //on dessine la forme voulu
         if(position_objet.equalsIgnoreCase("UNDEFINED")){
+          println("creation formes avec position random");
           creer_forme(get_random_position());
           mae = FSM.AFFICHER_FORMES;
         }
+        // sinon la position va etre définis par un clic
+        
       }
       else{        
         //on ne reconnait pas la forme demandé 
@@ -170,6 +188,7 @@ void mousePressed() { // sur l'événement clic
     case CREER:   
       if(position_objet.equalsIgnoreCase("THERE")){
         creer_forme(p);
+        println("je créer une forme en fonction du clic");
         mae=FSM.AFFICHER_FORMES;  
       }
       break; 
@@ -317,49 +336,97 @@ void keyPressed() {
   }
 }
 
-void analyse(String message){
-  // PREMIER: ANALYSE DE LA FORME VOULU
-  forme = analyse_type(message, "form");
+void analyse(String message, String type){
+  // le message provient d'un bus geste
+   if(type.equalsIgnoreCase("G")){
+     taux_confiance_geste = analyse_type(message,"Confidence");
+   }  
+   // le message provient d'un bus parole  
+   else{
+     // PREMIER: ANALYSE DE LA FORME VOULU
+    forme = analyse_type(message, "form");
+    
+    // DEUXIEME: ON MET A JOUR LA POSITION DE LA FORME CHOISI
+    // c'est le where dans le ivy bus recu
+    pointage_objet = analyse_type(message, "where");
+    
+    // TROISIEME: ON MET A JOUR LA POSITION FINALE DU DEPLACEMENT
+    // c'est le localisation dans le ivy bus recu
+    position_objet = analyse_type(message, "localisation");
   
-  // DEUXIEME: ON MET A JOUR LA POSITION DE LA FORME CHOISI
-  // c'est le where dans le ivy bus recu
-  position_objet = analyse_type(message, "where");
+    // QUATRIEME: ON REGARDE LA COULEUR RENSEIGNER
+    couleur = analyse_type(message, "color");
+    
+    // CINQUIEME: ON REGARDE L'ACTION VOULU
+    action = analyse_type(message,"action");
   
-  // TROISIEME: ON MET A JOUR LA POSITION FINALE DU DEPLACEMENT
-  // c'est le localisation dans le ivy bus recu
-  position = analyse_type(message, "localisation");
-
-  // QUATRIEME: ON REGARDE LA COULEUR RENSEIGNER
-  couleur = analyse_type(message, "color");
+    // FINALE: ON REGARDE LE TAUX DE CONFIANCE 
+    taux_confiance_parole = analyse_type(message,"Confidence");
+  }  
   
-  // CINQUIEME: ON REGARDE L'ACTION VOULU
-  action = analyse_type(message,"action");
-
-  // FINALE: ON REGARDE LE TAUX DE CONFIANCE
-  taux_confiance = analyse_type(message,"confidence");
   
-  // On met à jour la variable message
-  // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
-  message_parole = action + " " + forme + " " + couleur + " " + position + " " + position_objet;
+  // on verifie que le message est une demande logique
+  // pour l'action créer
+  if(action.equalsIgnoreCase("CREATE")){
+    //si la forme est soit une forme (cercle, triangle etc) ou alors un this (ca, cette forme...)
+    if(pointage_objet.equalsIgnoreCase("THIS") || forme.equalsIgnoreCase("CIRCLE") || forme.equalsIgnoreCase("TRIANGLE") || forme.equalsIgnoreCase("RECTANGLE") || forme.equalsIgnoreCase("DIAMOND") ){
+      // On met à jour la variable message
+      // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
+      message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+    }
+    else{
+      // On met à jour la variable message
+      message_parole = "0";
+    }
+  }  
+  // pour l'action bouger
+  if(action.equalsIgnoreCase("MOVE")){
+    //on a seulement besoin du pointage et de la position
+    if(pointage_objet.equalsIgnoreCase("THIS") && position_objet.equalsIgnoreCase("THIS")){
+      // On met à jour la variable message
+      // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
+      message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+    }
+    else{
+      // On met à jour la variable message
+      message_parole = "0";
+    }
+  }
+  // pour l'action supprimer
+  if(action.equalsIgnoreCase("DELETE")){
+    //on a seulement besoin d'une forme a supprimer
+    if(pointage_objet.equalsIgnoreCase("THIS") || forme.equalsIgnoreCase("CIRCLE") || forme.equalsIgnoreCase("TRIANGLE") || forme.equalsIgnoreCase("RECTANGLE") || forme.equalsIgnoreCase("DIAMOND") ){
+      // On met à jour la variable message
+      // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
+      message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+    }
+    else{
+      // On met à jour la variable message
+      message_parole = "0";
+    }
+  }
+  // pour l'action changer de couleur
+  if(action.equalsIgnoreCase("CHANGE_COLOR")){
+    message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+  }
+  // pour l'action quitter
+  if(action.equalsIgnoreCase("QUIT")){
+    message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+  }
+  
+  
 }
 
 String analyse_type(String message, String type) {
-  int position_type = message.indexOf(type);
-  // Si le message contient action alors c'est une commande de l'utilisateur
-  if(position_type != -1){
-    String message_type = (message.substring(position_type, message.length()));
-    int position_espace = message_type.indexOf(" ");
-    int difference_taille = message.length() - message_type.length();
-    int position_fin_type = position_espace + difference_taille;
-    // On récupère l'action donc après entre le action= et l'espace(d'out le +7 au début)
-    String action = message.substring(position_type + type.length() + 1, position_fin_type);
-    System.out.println("type: " + type + " : " + action);
-    return action;
+  String[] champs = message.split(" ");
+  for(int i=0; i<champs.length; i++){
+    if(champs[i].contains(type)){
+      String[] valeur = champs[i].split("=");
+      return valeur[1];
+    }
   }
-  else{
-    // le message n'est pas une commande
-    return "-";
-  }
+  // le message n'est pas une commande
+  return "-";
 }
 
 void realisation(){
@@ -386,7 +453,7 @@ void realisation(){
   } 
   else{
     // on ne reconnait pas l'action voulu => mise à jour de la FSM
-    message_erreur = "l'action enoncé n'est pas reconnue";
+    message_erreur = "l'action enoncé n'est pas reconnue: " + action;
     mae = FSM.ERREUR;
   }
 }
@@ -437,6 +504,9 @@ void creer_forme(Point p){
 }
 
 int[] maj_couleur(){
+  if(couleur.equalsIgnoreCase("THIS")){
+    
+  }
   if(couleur.equalsIgnoreCase("UNDEFINED")){
     return get_random_couleur();
   }
@@ -464,7 +534,7 @@ int[] maj_couleur(){
     int[] liste_couleur = {255, 102, 255};
     return liste_couleur;
   }
-  else if(couleur.equalsIgnoreCase("DARK")){
+  else if(couleur.equalsIgnoreCase("BLACK")){
     int[] liste_couleur = {0, 0, 0};
     return liste_couleur;
   }
