@@ -13,5 +13,5 @@ sra5 -b 127.255.255.255:2010 -g grammaire_parole.grxml -p on
 ## Contexte
 Ici, nous réalisons un projet dans le cadre du cours d'IHM Multimodal(M1, Upssitech SRI). Vous pourrez retrouver le sujet en suivant [ce lien](https://github.com/truillet/upssitech/blob/master/SRI/3A/IHM/TP/T3-5_multimodal_interaction.pdf).
 
-Concernant la gestion de dialogue nous utilisons le module sra5 et pour la capture des gestes nous utilisons l'application du OneDollarIvy [suivante](https://github.com/truillet/OneDollarIvy)https://github.com/truillet/OneDollarIvy).
+Concernant la gestion de dialogue nous utilisons le module sra5 et pour la capture des gestes nous utilisons l'application du OneDollarIvy [suivante](https://github.com/truillet/OneDollarIvy).
 
