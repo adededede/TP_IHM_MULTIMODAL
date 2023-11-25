@@ -34,8 +34,8 @@
 			<item> déplacer  <tag> out = "MOVE" </tag></item>
 			<item> bouger  <tag> out = "MOVE" </tag></item>
 			
-			<item> changer la couleur <tag> out = "CHANGE_COLOR" </tag></item>
-			<item> change la couleur <tag> out = "CHANGE_COLOR" </tag></item>
+			<item> changer <tag> out = "CHANGE_COLOR" </tag></item>
+			<item> change <tag> out = "CHANGE_COLOR" </tag></item>
 
 			<item> quitter <tag> out = "QUIT" </tag></item>
 			<item> sortir <tag> out = "QUIT" </tag></item>
@@ -73,8 +73,10 @@
 			<item> bleu <tag> out = "BLUE" </tag></item>
 			<item> rose <tag> out = "PINK" </tag></item>
 			<item> noir <tag> out = "BLACK" </tag></item>
-			<item> cette couleur ci <tag> out = "THIS" </tag></item>
-			<item> cette couleur <tag> out = "THIS" </tag></item>
+			<item> en cette couleur ci <tag> out = "THIS" </tag></item>
+			<item> de cette couleur ci <tag> out = "THIS" </tag></item>
+			<item> de cette couleur <tag> out = "THIS" </tag></item>
+			<item> en cette couleur <tag> out = "THIS" </tag></item>
 		</one-of> 
 	</rule>
 

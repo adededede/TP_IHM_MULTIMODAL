@@ -15,14 +15,13 @@ int indice_forme;
 PImage sketch_icon;
 String message_erreur;
 int nb_save = 0;
+String adresse = "127.255.255.255:2010";
 
 Ivy bus_geste;
-String adresse_geste = "127.255.255.255:2011";
 String message_geste;
 String taux_confiance_geste;
 
 Ivy bus_parole;
-String adresse_parole = "127.255.255.255:2010";
 String message_parole;
 String action;
 String forme;
@@ -46,7 +45,7 @@ void setup() {
   try{
       // création du bus dédié à la parole
       bus_parole = new Ivy("Parole","Parole Ready", null);
-      bus_parole.start(adresse_parole);
+      bus_parole.start(adresse);
       // on récupere tous les messages
       bus_parole.bindMsg("^sra5 Parsed=(.*)", new IvyMessageListener(){
         @Override
@@ -74,7 +73,7 @@ void setup() {
     try{  
       // création du bus dédié à la capture de geste
       bus_geste = new Ivy("Geste","Geste Ready", null);
-      bus_geste.start(adresse_geste);
+      bus_geste.start(adresse);
       // on récupere tous les messages
       bus_geste.bindMsg("^OneDollarIvy(.*)", new IvyMessageListener(){
         @Override
@@ -118,7 +117,6 @@ void draw() {
       else if(forme.equalsIgnoreCase("CIRCLE")||forme.equalsIgnoreCase("TRIANGLE")|| forme.equalsIgnoreCase("RECTANGLE")|| forme.equalsIgnoreCase("DIAMOND")){ 
         //on dessine la forme voulu
         if(position_objet.equalsIgnoreCase("UNDEFINED")){
-          println("creation formes avec position random");
           creer_forme(get_random_position());
           mae = FSM.AFFICHER_FORMES;
         }
@@ -153,6 +151,9 @@ void draw() {
       
     case CHANGER_COULEUR_SELECTION:
       // tous se fait dans la fonction de détection du clic
+      
+    case SELECTION_COULEUR:
+      // tous se fait dans la fonction de détection du clic
     
     case ERREUR:   
       println(message_erreur);
@@ -177,6 +178,7 @@ void affiche() {
 
 void mousePressed() { // sur l'événement clic
   Point p = new Point(mouseX,mouseY);
+  println("MAE : " + mae + " indice forme active ; " + indice_forme);
   switch (mae) {
     
     case INITIAL:
@@ -188,7 +190,6 @@ void mousePressed() { // sur l'événement clic
     case CREER:   
       if(position_objet.equalsIgnoreCase("THERE")){
         creer_forme(p);
-        println("je créer une forme en fonction du clic");
         mae=FSM.AFFICHER_FORMES;  
       }
       break; 
@@ -204,10 +205,6 @@ void mousePressed() { // sur l'événement clic
        formes.get(indice_forme).setColor(color(get_random_couleur()[0],get_random_couleur()[1],get_random_couleur()[2]));
        mae = FSM.AFFICHER_FORMES;
      }  
-     else{
-       message_erreur = "vous ne faites rien d'utile...";
-       mae = FSM.ERREUR;
-     }
      break;
      
    case SUPPRIMER:
@@ -257,14 +254,18 @@ void mousePressed() { // sur l'événement clic
       int r = 0;
       int g = 0;
       int b = 0;
+      boolean cette_couleur = false;
+      println("changer_couleur_selection");
       for (int i=0;i<formes.size();i++) { // we're trying every object in the list        
           if ((formes.get(i)).isClicked(p)) {
             indice_forme = i;
-            if(maj_couleur().length==0){
-                // on choisie une couleur random
-               r = get_random_couleur()[0];
-               g = get_random_couleur()[1];
-               b = get_random_couleur()[2];
+            println("changer_couleur_selection; clic");
+            if(maj_couleur().length==1 && maj_couleur()[0]==-1){ 
+              println("changer_couleur_selection; cette couleur");     
+                //la couleur égale à this color
+                //Il faut attendre le clic de sélection de la couleur
+                mae = FSM.SELECTION_COULEUR;
+                cette_couleur = true;
             }
             else{
                r = maj_couleur()[0];
@@ -273,16 +274,40 @@ void mousePressed() { // sur l'événement clic
             }
           }         
       }
-      if(indice_forme != -1){
+      if(indice_forme != -1 & !cette_couleur){
         formes.get(indice_forme).setColor(color(r,g,b));
         mae = FSM.AFFICHER_FORMES;
+      }
+      if(indice_forme == -1){
+        message_erreur = "Vous n'avez pas sélectionné de forme à changer de couleur";
+        mae = FSM.ERREUR;
+      }
+      break;
+      
+    case SELECTION_COULEUR:
+      color couleur_temp = -1;
+      println("selection_couleur"); 
+      for (int i=0;i<formes.size();i++) { // we're trying every object in the list       
+          if ((formes.get(i)).isClicked(p)) {  
+            println("selection_couleur; clic");  
+            couleur_temp = (formes.get(i)).getColor();
+          }         
+      }
+      if(indice_forme != -1){
+        if(couleur_temp != -1){
+          println("selection_couleur; afficher forme");  
+          formes.get(indice_forme).setColor(couleur_temp);
+          mae = FSM.AFFICHER_FORMES;
+        }
+        else{
+          message_erreur = "Vous n'avez pas sélectionné de couleur à copier";
+          mae = FSM.ERREUR;
+        }
       }
       else{
         message_erreur = "Vous n'avez pas sélectionné de forme à changer de couleur";
         mae = FSM.ERREUR;
       }
-      break;
-    
     default:
       break;
   }
@@ -382,7 +407,7 @@ void analyse(String message, String type){
   // pour l'action bouger
   if(action.equalsIgnoreCase("MOVE")){
     //on a seulement besoin du pointage et de la position
-    if(pointage_objet.equalsIgnoreCase("THIS") && position_objet.equalsIgnoreCase("THIS")){
+    if(pointage_objet.equalsIgnoreCase("THIS") && position_objet.equalsIgnoreCase("THERE")){
       // On met à jour la variable message
       // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
       message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
@@ -407,7 +432,16 @@ void analyse(String message, String type){
   }
   // pour l'action changer de couleur
   if(action.equalsIgnoreCase("CHANGE_COLOR")){
-    message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+    //on a seulement besoin d'une forme et de sa nouvelle couleur
+    if(pointage_objet.equalsIgnoreCase("THIS")){
+      // On met à jour la variable message
+      // FORMAT: action' 'forme' 'couleur' 'position' 'position_objet
+      message_parole = action + " " + forme + " " + couleur + " " + pointage_objet + " " + position_objet;
+    }
+    else{
+      // On met à jour la variable message
+      message_parole = "0";
+    }
   }
   // pour l'action quitter
   if(action.equalsIgnoreCase("QUIT")){
@@ -505,7 +539,9 @@ void creer_forme(Point p){
 
 int[] maj_couleur(){
   if(couleur.equalsIgnoreCase("THIS")){
-    
+    int[] zero = new int[1];
+    zero[0] = -1;
+    return zero;
   }
   if(couleur.equalsIgnoreCase("UNDEFINED")){
     return get_random_couleur();
