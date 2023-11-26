@@ -16,6 +16,7 @@ PImage sketch_icon;
 String message_erreur;
 int nb_save = 0;
 String adresse = "127.255.255.255:2010";
+Point position_temp = null;
 
 Ivy bus_geste;
 String message_geste;
@@ -116,7 +117,7 @@ void draw() {
       }  
       else if(forme.equalsIgnoreCase("CIRCLE")||forme.equalsIgnoreCase("TRIANGLE")|| forme.equalsIgnoreCase("RECTANGLE")|| forme.equalsIgnoreCase("DIAMOND")){ 
         //on dessine la forme voulu
-        if(position_objet.equalsIgnoreCase("UNDEFINED")){
+        if(position_objet.equalsIgnoreCase("UNDEFINED") && !couleur.equalsIgnoreCase("THIS")){
           creer_forme(get_random_position());
           mae = FSM.AFFICHER_FORMES;
         }
@@ -188,9 +189,69 @@ void mousePressed() { // sur l'événement clic
       break;
     
     case CREER:   
-      if(position_objet.equalsIgnoreCase("THERE")){
+      if(couleur.equalsIgnoreCase("THIS") & position_objet.equalsIgnoreCase("THERE")){
+        if(position_temp == null){
+          position_temp = p;
+          println("position furture inconnue, couleur celle là");
+          break;
+        }
+        else{
+          color couleur_temp = -1;
+          println(position_temp);
+          for (int i=0;i<formes.size();i++) { // we're trying every object in the list       
+              if ((formes.get(i)).isClicked(p)) {  
+                couleur_temp = (formes.get(i)).getColor();         
+              }         
+          }
+          if(couleur_temp != -1){ 
+            println("creation forme");
+            creer_forme(position_temp);
+            formes.get((formes.size())-1).setColor(couleur_temp);
+            position_temp = null;
+            mae = FSM.AFFICHER_FORMES;
+          }
+          else{
+            for (int i=0;i<formes.size();i++) { // we're trying every object in the list       
+              if ((formes.get(i)).isClicked(position_temp)) {  
+                couleur_temp = (formes.get(i)).getColor();         
+              }         
+            }
+            if(couleur_temp != -1){ 
+              println("creation forme");
+              creer_forme(p);
+              formes.get((formes.size())-1).setColor(couleur_temp);
+              position_temp = null;
+              mae = FSM.AFFICHER_FORMES;
+            }
+            else{
+              message_erreur = "Vous n'avez pas sélectionné de couleur à copier";
+              mae = FSM.ERREUR;
+            }  
+          }
+        } 
+      }   
+      else if(position_objet.equalsIgnoreCase("THERE") & !couleur.equalsIgnoreCase("THIS")){
         creer_forme(p);
         mae=FSM.AFFICHER_FORMES;  
+      }   
+      else if(position_objet.equalsIgnoreCase("UNDEFINED") & couleur.equalsIgnoreCase("THIS")){
+        color couleur_temp = -1;
+        for (int i=0;i<formes.size();i++) { // we're trying every object in the list       
+            if ((formes.get(i)).isClicked(p)) {  
+              couleur_temp = (formes.get(i)).getColor();
+            }         
+        }
+        if(couleur_temp != -1){ 
+          creer_forme(get_random_position());
+          println(formes);
+          println("taille de formes= " + formes.size());
+          formes.get((formes.size())-1).setColor(couleur_temp);
+          mae = FSM.AFFICHER_FORMES;
+        }
+        else{
+          message_erreur = "Vous n'avez pas sélectionné de couleur à copier";
+          mae = FSM.ERREUR;
+        } 
       }
       break; 
      
@@ -502,6 +563,11 @@ void creer_forme(Point p){
      r = get_random_couleur()[0];
      g = get_random_couleur()[1];
      b = get_random_couleur()[2];
+  }
+  else if(maj_couleur().length==1){
+     r = 0;
+     g = 0;
+     b = 0;
   }
   else{
      r = maj_couleur()[0];

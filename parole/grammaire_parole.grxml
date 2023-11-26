@@ -58,6 +58,10 @@
 			<item> triangle <tag> out = "TRIANGLE" </tag></item>
 			<item> losange <tag> out = "DIAMOND" </tag></item>
 			<item> cercle <tag> out = "CIRCLE" </tag></item>
+			<item> un rectangle <tag> out = "RECTANGLE" </tag></item>
+			<item> un triangle <tag> out = "TRIANGLE" </tag></item>
+			<item> un losange <tag> out = "DIAMOND" </tag></item>
+			<item> un cercle <tag> out = "CIRCLE" </tag></item>
 			<item> rectangle <tag> out = "RECTANGLE" </tag></item>
 		</one-of>
 	</rule>
