@@ -76,7 +76,7 @@ void setup() {
       bus_geste = new Ivy("Geste","Geste Ready", null);
       bus_geste.start(adresse);
       // on récupere tous les messages
-      bus_geste.bindMsg("^OneDollarIvy(.*)", new IvyMessageListener(){
+      bus_geste.bindMsg("^OneDollarIvy (.*)", new IvyMessageListener(){
         @Override
         public void receive(IvyClient client, String[] args) {
           String simulation = args[0];
@@ -110,10 +110,7 @@ void draw() {
       // creation de la forme
       if (forme.equalsIgnoreCase("undefined") && pointage_objet.equalsIgnoreCase("this")){
         //la forme n'a pas été définie vocalement
-        // tant que c'est le cas on attend
-        delay(8000);
-        mae = FSM.CREER;
-        break;//PEUT ETRE FAIRE UN ETAT DANS LA FSM: ATTENTE_DESSIN_FORME
+        break;
       }  
       else if(forme.equalsIgnoreCase("CIRCLE")||forme.equalsIgnoreCase("TRIANGLE")|| forme.equalsIgnoreCase("RECTANGLE")|| forme.equalsIgnoreCase("DIAMOND")){ 
         //on dessine la forme voulu
@@ -425,6 +422,8 @@ void keyPressed() {
 void analyse(String message, String type){
   // le message provient d'un bus geste
    if(type.equalsIgnoreCase("G")){
+     println(message);
+     forme = analyse_type(message, "Template");
      taux_confiance_geste = analyse_type(message,"Confidence");
    }  
    // le message provient d'un bus parole  
